@@ -1,28 +1,50 @@
 from typing import Union
 
-from tomlkit import item
-
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, Body, HTTPException
 from pydantic import BaseModel
+from fastapi.responses import HTMLResponse
 
 app = FastAPI()
+
+stock = [{'name' : "arroz", 'price': 10.00, 'amount' : "13 pacotes disponíveis"},
+         {'name' : "feijao", 'price': 15.00, 'amount' : "13 pacotes disponíveis"},
+         {'name' : "água", 'price': 2.50, 'amount' : "45 garrafas" },
+         {'name' : "refrigerante", 'price': 3.50, 'amount' : "32 latas"},
+         {'name' : "carne", 'price': 35.00, 'amount' : "5 kgs disponíveis" },
+]
 
 class Item(BaseModel):
     name: str
     price: float
+    amount : str
 
-@app.post("/items/{item_id}")
-def create_item(item_id: int, item: Item):
-    return {item_id, item}
+# Adiciona produto no estoque
+@app.post("/items/", status_code=201, response_model=Item)
+async def create_item(item_id: int, item: Item):
+    item = item.dict()
+    stock.append(item)
+    return item
 
-@app.get("/items/{item_id}")
+# Verifica Estoque
+@app.get("/itens")
+async def get_estoque():
+    return stock
+
+# Verifica um item do estoque
+@app.get("/itens/{item_id}", response_model = Item)
 def get_item(item_id: int):
-    return {"item_id": item_id}
+    item = stock[item_id]
+    return item
 
-@app.put("/items/{item_id}", status_code=status.HTTP_201_CREATED)
-def update_item(item_id: int, item: Item):
-    return {"item_name": item.name, "item_id": item_id, "item_price": item.price}
+#Atualiza item do estoque
+@app.put("/items/{item_id}")
+async def update_item(item_id: int, item: Item):
+    stock[item_id] = item
+    return {"item_id": item_id, "item_name": item.name, "item_price": item.price, "item_amount": item.amount}
 
+# Deleta item do estoque
 @app.delete("/items/{item_id}")
-def delete_item(item_id: int):
-    return "delete item with id {id}"
+async def delete_item(item_id: int):
+    item = stock[item_id]
+    stock.pop(item_id)
+    return {'Delete produto': item}
